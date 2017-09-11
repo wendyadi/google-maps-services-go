@@ -30,8 +30,9 @@ import (
 )
 
 var staticMapAPI = &apiConfig{
-	host: "https://maps.googleapis.com",
-	path: "/maps/api/staticmap",
+	host:            "https://maps.googleapis.com",
+	path:            "/maps/api/staticmap",
+	acceptsClientID: true,
 }
 
 //MapType (optional) defines the type of map to construct. There are several possible maptype values, including roadmap, satellite, hybrid, and terrain
@@ -284,18 +285,19 @@ func (c *Client) StaticMap(ctx context.Context, r *StaticMapRequest) (image.Imag
 		return nil, errors.New("maps: Size empty")
 	}
 
-	resp, err := c.get(ctx, staticMapAPI, r)
+	resp, err := c.getBinary(ctx, staticMapAPI, r)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.data.Close()
 
-	if resp.StatusCode != 200 {
-		if b, err := ioutil.ReadAll(resp.Body); err == nil {
-			return nil, fmt.Errorf("Static Map API returned Status Code %d: %s", resp.StatusCode, string(b))
+	if resp.statusCode != 200 {
+		if b, err := ioutil.ReadAll(resp.data); err == nil {
+			return nil, fmt.Errorf("Static Map API returned Status Code %d: %s", resp.statusCode, string(b))
 		}
 		return nil, err
 	}
 
-	img, _, err := image.Decode(resp.Body)
+	img, _, err := image.Decode(resp.data)
 	return img, err
 }
